@@ -2,6 +2,7 @@
 using static System.Console;
 using System.Collections.Generic;
 using System.IO;
+using System.Xml.Serialization;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -20,13 +21,34 @@ using System.Threading.Tasks;
 использование этого класса, результаты должны записываться и считываться из файла.*/
 namespace C_sharp_DZ_10_1
 {
-    [Serializable]
-    class Invoice
+    
+    public class PropertyAttribute : Attribute
     {
+        
+        public bool FormatSer { get; set; }
+
+        public PropertyAttribute()
+        { }
+
+        public PropertyAttribute(bool formatSer)
+        {
+            FormatSer = formatSer;
+        }
+    }
+
+
+
+
+    [Serializable]
+    public class Invoice
+    {
+        public static bool formatSerializable;
         public decimal DayPayment { get; set; } //оплата за день (гр)
         public int NumbersOfDays { get; set; } //количество дней (шт)
         public double DayPenaltyForLate { get; set; } //штраф за один день задержки оплаты (%)
         public int NumbersOfDaysForLate { get; set; } //количество дней задержи оплаты (шт)
+
+        [Property()]
         public decimal PaymentWithoutPenalty //сумма к оплате без штрафа (гр)
         {
             get { return DayPayment * NumbersOfDays; }
@@ -39,7 +61,9 @@ namespace C_sharp_DZ_10_1
         {
             get { return PaymentWithoutPenalty + Penalty; }
         }
+
         public static bool formatSerializable;
+
         public Invoice() { }
         public Invoice(decimal dayPayment, int numbersOfDays, double dayPenaltyForLate, int numbersOfDaysForLate)
         {
@@ -53,13 +77,16 @@ namespace C_sharp_DZ_10_1
             return
                 $"Оплата за день: {DayPayment:C2}\n" +
                 $"Количество дней: {NumbersOfDays}\n" +
-                $"Штраф за один день задержки оплаты: {DayPenaltyForLate}\n" +
+                $"Штраф за один день задержки оплаты: {DayPenaltyForLate} %\n" +
                 $"Количество дней задержи оплаты: {NumbersOfDaysForLate}\n" +
                 $"Сумма к оплате без штрафа: {PaymentWithoutPenalty:C2}\n" +
                 $"Штраф: {Penalty:C2}\n" +
-                $"ОБЩАЯ СУММВ К ОПЛАТЕ: {TotalPayment:C2}\n";
+                $"ОБЩАЯ СУММА К ОПЛАТЕ: {TotalPayment:C2}\n";
         }
+
     }
+
+
 
     class Program
     {
@@ -68,14 +95,40 @@ namespace C_sharp_DZ_10_1
         static void Main(string[] args)
         {
             Title = "C_sharp_DZ_10_1";
+            string fileName = "invoice_serial.xml";
             List<Invoice> invoices = new List<Invoice>()
             {
                 new Invoice(35.12m, 12, 3.5, 3),
                 new Invoice(15.62m, 10, 2.5, 4),
-                new Invoice(56.16m, 15, 2.3, 2),
-                new Invoice(19.78m, 18, 4.1, 4)
+                //new Invoice(56.16m, 15, 2.3, 2),
+                //new Invoice(19.78m, 18, 4.1, 4)
             };
             foreach (Invoice inv in invoices) WriteLine(inv);
+
+
+            XmlSerializer xmlFormat = new XmlSerializer(typeof(List<Invoice>));
+            try
+            {
+                using (Stream fStream = File.Create(fileName))
+                {
+                    xmlFormat.Serialize(fStream, invoices);
+                }
+                WriteLine("_______________________________________________XmlSerialize OK!\n");
+
+                List<Invoice> invoicesAfterDeserialized = null;
+                using (Stream fStream = File.OpenRead(fileName))
+                {
+                    invoicesAfterDeserialized = (List<Invoice>)xmlFormat.Deserialize(fStream);
+                }
+                foreach (Invoice item in invoicesAfterDeserialized)
+                {
+                    WriteLine(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLine(ex);
+            }
 
 
 
