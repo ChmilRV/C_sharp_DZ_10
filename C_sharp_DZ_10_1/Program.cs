@@ -3,6 +3,7 @@ using static System.Console;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
+using System.Runtime.Versioning;
 /*Разработать класс «Счет для оплаты». В классе предусмотреть следующие поля:
 ■ оплата за день;
 ■ количество дней;
@@ -99,29 +100,41 @@ namespace C_sharp_DZ_10_1
     }
     class Program
     {
-        static void Main(string[] args)
+        public static void MakeSerial(string fName, Invoice obj)
         {
-            Title = "C_sharp_DZ_10_1";
-            string fileName = "invoice_serial.soap";
-            Invoice.formatSerializable = false;
-            Invoice invoice1 = new Invoice(35.12m, 12, 3.5, 3);
-            WriteLine(invoice1);
             SoapFormatter soapFormat = new SoapFormatter();
             try
             {
-                using (Stream fStream = File.Create(fileName))
+                using (Stream fStream = File.Create(fName))
                 {
-                    soapFormat.Serialize(fStream, invoice1);
+                    soapFormat.Serialize(fStream, obj);
                 }
-                WriteLine("_________________________________SoapSerialize OK!\n");
-                Invoice invoice1_1 = null;
-                using (Stream fStream = File.OpenRead(fileName))
+                Invoice obj1 = null;
+                using (Stream fStream = File.OpenRead(fName))
                 {
-                    invoice1_1 = (Invoice)soapFormat.Deserialize(fStream);
+                    obj1 = (Invoice)soapFormat.Deserialize(fStream);
                 }
-                WriteLine(invoice1_1);
+                WriteLine(obj1);
             }
             catch (Exception ex) { WriteLine(ex); }
+        }
+        static void Main(string[] args)
+        {
+            Title = "C_sharp_DZ_10_1";
+            string fileNameAll = "invoiceSerialAllField.soap";
+            Invoice.formatSerializable = true;  //сериализуются и десериализируются все поля
+            Invoice invoice1 = new Invoice(35.12m, 12, 3.5, 3);
+            WriteLine("Счет для оплаты 1.\n");
+            WriteLine(invoice1);
+            WriteLine("++++++++++++++Пример сериализации всех полей.++++++++++++\n");
+            MakeSerial(fileNameAll, invoice1);
+            string fileNameNotAll = "invoiceSerialNotAllField.soap";
+            Invoice.formatSerializable = false;  //вычисляемые поля не сериализуются
+            Invoice invoice2 = new Invoice(12.17m, 16, 3.9, 4);
+            WriteLine("Счет для оплаты 2.\n");
+            WriteLine(invoice2);
+            WriteLine("______________Пример сериализации не всех полей._____________\n");
+            MakeSerial(fileNameNotAll, invoice2);
             ReadKey();
         }
     }
