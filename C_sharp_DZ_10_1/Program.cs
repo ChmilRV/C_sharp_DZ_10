@@ -1,14 +1,8 @@
 ﻿using System;
 using static System.Console;
-using System.Collections.Generic;
 using System.IO;
-using System.Xml.Serialization;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
-using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
-using System.Threading.Tasks;
 /*Разработать класс «Счет для оплаты». В классе предусмотреть следующие поля:
 ■ оплата за день;
 ■ количество дней;
@@ -23,24 +17,6 @@ using System.Threading.Tasks;
 использование этого класса, результаты должны записываться и считываться из файла.*/
 namespace C_sharp_DZ_10_1
 {
-    
-    public class PropertyAttribute : Attribute
-    {
-        
-        public static bool FormatSer { get; set; }
-
-        public PropertyAttribute()
-        { }
-
-        //public PropertyAttribute(bool formatSer)
-        //{
-        //    FormatSer = formatSer;
-        //}
-    }
-
-
-
-
     [Serializable]
     public class Invoice : ISerializable
     {
@@ -63,9 +39,7 @@ namespace C_sharp_DZ_10_1
             get { return PaymentWithoutPenalty + Penalty; }
             set { }
         }
-
         public static bool formatSerializable;
-
         public Invoice() { }
         public Invoice(decimal dayPayment, int numbersOfDays, double dayPenaltyForLate, int numbersOfDaysForLate)
         {
@@ -74,7 +48,6 @@ namespace C_sharp_DZ_10_1
             DayPenaltyForLate = dayPenaltyForLate;
             NumbersOfDaysForLate = numbersOfDaysForLate;
         }
-
         private Invoice(SerializationInfo info, StreamingContext context)
         {
             DayPayment = info.GetDecimal("DayPayment");
@@ -88,7 +61,6 @@ namespace C_sharp_DZ_10_1
                 TotalPayment = info.GetDecimal("TotalPayment");
             }
         }
-
         void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue("DayPayment", DayPayment);
@@ -102,12 +74,11 @@ namespace C_sharp_DZ_10_1
                 info.AddValue("TotalPayment", TotalPayment);
             }
         }
-
-
-        
         public override string ToString()
         {
-            return
+            if (formatSerializable)
+            {
+                return
                 $"Оплата за день: {DayPayment:C2}\n" +
                 $"Количество дней: {NumbersOfDays}\n" +
                 $"Штраф за один день задержки оплаты: {DayPenaltyForLate} %\n" +
@@ -115,62 +86,42 @@ namespace C_sharp_DZ_10_1
                 $"Сумма к оплате без штрафа: {PaymentWithoutPenalty:C2}\n" +
                 $"Штраф: {Penalty:C2}\n" +
                 $"ОБЩАЯ СУММА К ОПЛАТЕ: {TotalPayment:C2}\n";
+            }
+            else
+            {
+                return
+                $"Оплата за день: {DayPayment:C2}\n" +
+                $"Количество дней: {NumbersOfDays}\n" +
+                $"Штраф за один день задержки оплаты: {DayPenaltyForLate} %\n" +
+                $"Количество дней задержи оплаты: {NumbersOfDaysForLate}\n";
+            }
         }
-
     }
-
-
-
     class Program
     {
-
-
         static void Main(string[] args)
         {
             Title = "C_sharp_DZ_10_1";
-            string fileName = "invoices_serial.soap";
-            List<Invoice> invoices = new List<Invoice>()
-            {
-                new Invoice(35.12m, 12, 3.5, 3),
-                new Invoice(15.62m, 10, 2.5, 4),
-                //new Invoice(56.16m, 15, 2.3, 2),
-                //new Invoice(19.78m, 18, 4.1, 4)
-            };
-            foreach (Invoice inv in invoices) WriteLine(inv);
-
-
-            SoapFormatter soapFormat = new SoapFormatter(/*typeof(List<Invoice>)*/);
+            string fileName = "invoice_serial.soap";
+            Invoice.formatSerializable = false;
+            Invoice invoice1 = new Invoice(35.12m, 12, 3.5, 3);
+            WriteLine(invoice1);
+            SoapFormatter soapFormat = new SoapFormatter();
             try
             {
                 using (Stream fStream = File.Create(fileName))
                 {
-                    soapFormat.Serialize(fStream, invoices);
+                    soapFormat.Serialize(fStream, invoice1);
                 }
-                WriteLine("_______________________________________________SoapSerialize OK!\n");
-
-                List<Invoice> invoicesAfterDeserialized = null;
+                WriteLine("_________________________________SoapSerialize OK!\n");
+                Invoice invoice1_1 = null;
                 using (Stream fStream = File.OpenRead(fileName))
                 {
-                    invoicesAfterDeserialized = (List<Invoice>)soapFormat.Deserialize(fStream);
+                    invoice1_1 = (Invoice)soapFormat.Deserialize(fStream);
                 }
-                foreach (Invoice item in invoicesAfterDeserialized)
-                {
-                    WriteLine(item);
-                }
+                WriteLine(invoice1_1);
             }
-            catch (Exception ex)
-            {
-                WriteLine(ex);
-            }
-
-
-            Invoice.formatSerializable = true;
-            
-
-
-
-
-
+            catch (Exception ex) { WriteLine(ex); }
             ReadKey();
         }
     }
