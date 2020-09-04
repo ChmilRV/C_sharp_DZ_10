@@ -3,6 +3,8 @@ using static System.Console;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Soap;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -25,41 +27,41 @@ namespace C_sharp_DZ_10_1
     public class PropertyAttribute : Attribute
     {
         
-        public bool FormatSer { get; set; }
+        public static bool FormatSer { get; set; }
 
         public PropertyAttribute()
         { }
 
-        public PropertyAttribute(bool formatSer)
-        {
-            FormatSer = formatSer;
-        }
+        //public PropertyAttribute(bool formatSer)
+        //{
+        //    FormatSer = formatSer;
+        //}
     }
 
 
 
 
     [Serializable]
-    public class Invoice
+    public class Invoice : ISerializable
     {
-        public static bool formatSerializable;
         public decimal DayPayment { get; set; } //оплата за день (гр)
         public int NumbersOfDays { get; set; } //количество дней (шт)
         public double DayPenaltyForLate { get; set; } //штраф за один день задержки оплаты (%)
         public int NumbersOfDaysForLate { get; set; } //количество дней задержи оплаты (шт)
-
-        [Property()]
         public decimal PaymentWithoutPenalty //сумма к оплате без штрафа (гр)
         {
             get { return DayPayment * NumbersOfDays; }
+            set { }
         }
         public decimal Penalty //штраф
         {
             get { return DayPayment * (decimal)DayPenaltyForLate / 100 * NumbersOfDaysForLate; }
+            set { }
         }
         public decimal TotalPayment //общая сумма к оплате
         {
             get { return PaymentWithoutPenalty + Penalty; }
+            set { }
         }
 
         public static bool formatSerializable;
@@ -72,6 +74,37 @@ namespace C_sharp_DZ_10_1
             DayPenaltyForLate = dayPenaltyForLate;
             NumbersOfDaysForLate = numbersOfDaysForLate;
         }
+
+        private Invoice(SerializationInfo info, StreamingContext context)
+        {
+            DayPayment = info.GetDecimal("DayPayment");
+            NumbersOfDays = info.GetInt32("NumbersOfDays");
+            DayPenaltyForLate = info.GetDouble("DayPenaltyForLate");
+            NumbersOfDaysForLate = info.GetInt32("NumbersOfDaysForLate");
+            if (formatSerializable)
+            {
+                PaymentWithoutPenalty = info.GetDecimal("PaymentWithoutPenalty");
+                Penalty = info.GetDecimal("Penalty");
+                TotalPayment = info.GetDecimal("TotalPayment");
+            }
+        }
+
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("DayPayment", DayPayment);
+            info.AddValue("NumbersOfDays", NumbersOfDays);
+            info.AddValue("DayPenaltyForLate", DayPenaltyForLate);
+            info.AddValue("NumbersOfDaysForLate", NumbersOfDaysForLate);
+            if (formatSerializable)
+            {
+                info.AddValue("PaymentWithoutPenalty", PaymentWithoutPenalty);
+                info.AddValue("Penalty", Penalty);
+                info.AddValue("TotalPayment", TotalPayment);
+            }
+        }
+
+
+        
         public override string ToString()
         {
             return
@@ -95,7 +128,7 @@ namespace C_sharp_DZ_10_1
         static void Main(string[] args)
         {
             Title = "C_sharp_DZ_10_1";
-            string fileName = "invoice_serial.xml";
+            string fileName = "invoices_serial.soap";
             List<Invoice> invoices = new List<Invoice>()
             {
                 new Invoice(35.12m, 12, 3.5, 3),
@@ -106,19 +139,19 @@ namespace C_sharp_DZ_10_1
             foreach (Invoice inv in invoices) WriteLine(inv);
 
 
-            XmlSerializer xmlFormat = new XmlSerializer(typeof(List<Invoice>));
+            SoapFormatter soapFormat = new SoapFormatter(/*typeof(List<Invoice>)*/);
             try
             {
                 using (Stream fStream = File.Create(fileName))
                 {
-                    xmlFormat.Serialize(fStream, invoices);
+                    soapFormat.Serialize(fStream, invoices);
                 }
-                WriteLine("_______________________________________________XmlSerialize OK!\n");
+                WriteLine("_______________________________________________SoapSerialize OK!\n");
 
                 List<Invoice> invoicesAfterDeserialized = null;
                 using (Stream fStream = File.OpenRead(fileName))
                 {
-                    invoicesAfterDeserialized = (List<Invoice>)xmlFormat.Deserialize(fStream);
+                    invoicesAfterDeserialized = (List<Invoice>)soapFormat.Deserialize(fStream);
                 }
                 foreach (Invoice item in invoicesAfterDeserialized)
                 {
@@ -131,6 +164,8 @@ namespace C_sharp_DZ_10_1
             }
 
 
+            Invoice.formatSerializable = true;
+            
 
 
 
